@@ -1,6 +1,12 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"sort"
+	"text/tabwriter"
+	"time"
+)
 
 type Track struct {
 	Title  string
@@ -17,8 +23,39 @@ var tracks = []*Track{
 	{"Ready To Go", "Martin Solveig", "Smash", 2011, length("4m24s")},
 }
 
-func main() {
+// for sorting
+type byArtists []*Track
 
+func (x byArtists) Len() int           { return len(x) }
+func (x byArtists) Less(i, j int) bool { return x[i].Artist < x[j].Artist }
+func (x byArtists) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
+
+type customSort struct {
+	t    []*Track
+	less func(x, y *Track) bool
+}
+
+func (x customSort) Len() int           { return len(x.t) }
+func (x customSort) Less(i, j int) bool { return x.less(x.t[i], x.t[j]) }
+func (x customSort) Swap(i, j int)      { x.t[i], x.t[j] = x.t[j], x.t[i] }
+
+func main() {
+	sort.Sort(customSort{tracks, func(x, y *Track) bool {
+		if x.Title != y.Title {
+			return x.Title < y.Title
+		}
+
+		if x.Year != y.Year {
+			return x.Year < y.Year
+		}
+
+		if x.Length != y.Length {
+			return x.Length < y.Length
+		}
+
+		return false
+	}})
+	printTracks(tracks)
 }
 
 func length(s string) time.Duration {
@@ -27,4 +64,15 @@ func length(s string) time.Duration {
 		panic(err)
 	}
 	return d
+}
+
+func printTracks(tracks []*Track) {
+	const format = "%v\t%v\t%v\t%v\t%v\t\n"
+	tw := new(tabwriter.Writer).Init(os.Stdout, 0, 8, 2, ' ', 0)
+	fmt.Fprintf(tw, format, "Title", "Artist", "Album", "Year", "Length")
+	fmt.Fprintf(tw, format, "-----", "------", "-----", "----", "------")
+	for _, track := range tracks {
+		fmt.Fprintf(tw, format, track.Title, track.Artist, track.Album, track.Year, track.Length)
+	}
+	tw.Flush()
 }
